@@ -74,16 +74,16 @@ A typical LDO regulator draws 1–5 mA of quiescent current regardless of load. 
 | Phase | Duration | Current | Energy per cycle |
 |-------|----------|---------|-----------------|
 | Active (boot, DHT, LoRaWAN TX/RX) | ~10 s | ~120 mA | ~0.33 mAh |
-| Deep sleep | ~1790 s | ~160 µA* | ~0.08 mAh |
-| **Cycle total** | **30 min** | | **~0.41 mAh** |
+| Deep sleep | ~1790 s | **330 µA** (measured) | ~0.16 mAh |
+| **Cycle total** | **30 min** | | **~0.49 mAh** |
 
-\* Sleep floor: ESP32-C3 5 µA + DHT11 standby ~100 µA + HT7333 ~55 µA
+The 330 µA sleep floor was measured on the actual hardware. It breaks down roughly as: ESP32-C3 deep sleep ~5 µA + DHT11 standby ~100 µA + HT7333 quiescent ~55 µA + PCB leakage/pull-ups ~170 µA.
 
-With 48 cycles per day that works out to roughly **20 mAh/day**, giving an estimated runtime of:
+With 48 cycles per day that works out to roughly **24 mAh/day**, giving an estimated runtime of:
 
-> **2500 mAh ÷ 20 mAh/day ≈ 125 days (~4 months)**
+> **2500 mAh ÷ 24 mAh/day ≈ 104 days (~3.5 months)**
 
-Real-world runtime depends on cell capacity, temperature, and how often a fresh OTAA join is needed after a reset. Using SF9 instead of SF12 would shorten TX time and push the estimate toward 5–6 months.
+Real-world runtime depends on cell capacity, temperature, and how often a fresh OTAA join is needed after a reset. Using SF9 instead of SF12 would shorten TX time and add a few weeks.
 
 ## LoRa payload format
 
