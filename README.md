@@ -28,6 +28,16 @@ Designed to run for months on a single 18650 cell.
 
 DHT11 data pin: GPIO 1, powered from the 3.3 V rail.
 
+## Hardware modifications
+
+Out-of-the-box dev boards are not optimised for battery operation. Two physical modifications were made before deploying this device:
+
+**ESP32-C3 dev board (USB-C variant):** the onboard power LED was desoldered. A typical power LED with a 1 kΩ series resistor draws ~3 mA continuously — more than ten times the entire sleep budget of the circuit.
+
+**Moisture sensor board:** the onboard power LED was desoldered for the same reason. These sensors commonly ship with a LED that lights up whenever the board is powered, making them unsuitable for sleep-based duty cycling without modification.
+
+Both LEDs were removed with a soldering iron. No other components were changed. The measured sleep current of 330 µA already reflects these modifications.
+
 ## Credentials
 
 Copy `secrets.h.example` to `secrets.h` and fill in your LoRaWAN keys before compiling:
