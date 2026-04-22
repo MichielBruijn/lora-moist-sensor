@@ -1,5 +1,6 @@
 #include <RadioLib.h>
 #include <DHT.h>
+#include <Preferences.h>
 #include "secrets.h"
 
 // SX1276 radio module pin mapping
@@ -23,15 +24,18 @@ LoRaWANNode node(&radio, &Region, subBand);
 // LoRaWAN credentials are defined in secrets.h (not committed to git)
 
 DHT dht(DHTPIN, DHT11);
+Preferences store;
 
 // Deep sleep duration: 30 minutes
 #define SLEEP_US (30 * 60 * 1000000ULL)
 
-// LoRaWAN session and nonce buffers preserved in RTC memory across deep sleep
+// Session buffer in RTC memory (survives deep sleep, lost on reset/power cycle)
 RTC_DATA_ATTR uint8_t LWsession[RADIOLIB_LORAWAN_SESSION_BUF_SIZE];
-RTC_DATA_ATTR uint8_t LWnonces[RADIOLIB_LORAWAN_NONCES_BUF_SIZE];
 RTC_DATA_ATTR bool sessionSaved = false;
 RTC_DATA_ATTR int bootCount = 0;
+
+// Nonce buffer loaded from NVS flash (survives both deep sleep and power cycle)
+uint8_t LWnonces[RADIOLIB_LORAWAN_NONCES_BUF_SIZE];
 
 // Power on the SX1276 module via GPIO pins
 void radioOn() {
@@ -92,15 +96,25 @@ void setup() {
   radio.setOutputPower(17);
   node.beginOTAA(joinEUI, devEUI, nwkKey, appKey);
 
-  // Attempt to restore LoRaWAN session from RTC memory
-  // First boot after flash: sessionSaved=false, triggers fresh join
-  // Boot #2 after fresh join: nonces restore OK, session checksum fails (-1120),
-  //   falls back to fresh join — this is expected after GPIO power cycling
-  // Boot #3+: both nonces and session restore successfully, no join needed
-  if (sessionSaved) {
-    Serial.println("Restoring session...");
+  // Load nonces from NVS flash (survives power cycle)
+  store.begin("lorawan");
+  bool hasNonces = store.isKey("nonces");
+  if (hasNonces) {
+    store.getBytes("nonces", LWnonces, RADIOLIB_LORAWAN_NONCES_BUF_SIZE);
+    Serial.println("Nonces loaded from NVS");
+  }
+  store.end();
+
+  // Restore nonces (from NVS) and session (from RTC) if available
+  // After power cycle: nonces restored from NVS, session lost → fresh join
+  // After deep sleep boot #2: nonces OK, session checksum fails (-1120),
+  //   falls back to fresh join — expected after GPIO power cycling
+  // After deep sleep boot #3+: both restore successfully, no join needed
+  if (hasNonces) {
     int16_t nonceState = node.setBufferNonces(LWnonces);
     Serial.printf("setBufferNonces: %d\n", nonceState);
+  }
+  if (sessionSaved) {
     int16_t sessState = node.setBufferSession(LWsession);
     Serial.printf("setBufferSession: %d\n", sessState);
   }
@@ -120,8 +134,13 @@ void setup() {
     goSleep();
   }
 
-  // Save nonces and session to RTC memory for next wake-up
+  // Save nonces to NVS flash (survives power cycle and deep sleep)
   memcpy(LWnonces, node.getBufferNonces(), RADIOLIB_LORAWAN_NONCES_BUF_SIZE);
+  store.begin("lorawan");
+  store.putBytes("nonces", LWnonces, RADIOLIB_LORAWAN_NONCES_BUF_SIZE);
+  store.end();
+
+  // Save session to RTC memory (survives deep sleep only)
   memcpy(LWsession, node.getBufferSession(), RADIOLIB_LORAWAN_SESSION_BUF_SIZE);
   sessionSaved = true;
 
