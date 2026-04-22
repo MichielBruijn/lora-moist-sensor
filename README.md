@@ -34,7 +34,7 @@ Out-of-the-box dev boards are not optimised for battery operation. Two physical 
 
 **ESP32-C3 dev board (USB-C variant):** the onboard power LED was desoldered. A typical power LED with a 1 kΩ series resistor draws ~3 mA continuously — more than ten times the entire sleep budget of the circuit.
 
-**Moisture sensor board:** the onboard power LED was desoldered for the same reason. These sensors commonly ship with a LED that lights up whenever the board is powered, making them unsuitable for sleep-based duty cycling without modification.
+**Moisture sensor board:** the onboard power LED was desoldered. Note: this was not strictly necessary — the sensor is only powered when switched on via GPIO, so the LED would only be on during the brief measurement window. It was removed out of caution.
 
 Both LEDs were removed with a soldering iron. No other components were changed. The measured sleep current of 330 µA already reflects these modifications.
 
@@ -81,19 +81,25 @@ A typical LDO regulator draws 1–5 mA of quiescent current regardless of load. 
 
 ### Estimated battery life on a 2500 mAh 18650
 
-| Phase | Duration | Current | Energy per cycle |
-|-------|----------|---------|-----------------|
-| Active (boot, DHT, LoRaWAN TX/RX) | ~10 s | ~120 mA | ~0.33 mAh |
-| Deep sleep | ~1790 s | **330 µA** (measured) | ~0.16 mAh |
-| **Cycle total** | **30 min** | | **~0.49 mAh** |
+The power budget has two distinct components: the sleep baseline and the transmit overhead.
 
-The 330 µA sleep floor was measured on the actual hardware. It breaks down roughly as: ESP32-C3 deep sleep ~5 µA + DHT11 standby ~100 µA + HT7333 quiescent ~55 µA + PCB leakage/pull-ups ~170 µA.
+**Sleep baseline (measured):**
+330 µA × 24 h = **7.9 mAh/day**
+This is the dominant and measurable part. It breaks down roughly as: ESP32-C3 deep sleep ~5 µA + DHT11 standby ~100 µA + HT7333 quiescent ~55 µA + PCB leakage/pull-ups ~170 µA.
 
-With 48 cycles per day that works out to roughly **24 mAh/day**, giving an estimated runtime of:
+**Transmit overhead (estimated, 48 cycles/day):**
 
-> **2500 mAh ÷ 24 mAh/day ≈ 104 days (~3.5 months)**
+| Sub-phase | Duration | Current | Energy/day |
+|-----------|----------|---------|------------|
+| LoRaWAN TX (SF12, ~17 bytes) | ~2 s | 120 mA | ~3.2 mAh |
+| ESP32-C3 active (boot, DHT, RX windows) | ~8 s | ~25 mA | ~2.7 mAh |
+| **TX subtotal** | | | **~5.9 mAh** |
 
-Real-world runtime depends on cell capacity, temperature, and how often a fresh OTAA join is needed after a reset. Using SF9 instead of SF12 would shorten TX time and add a few weeks.
+**Total: ~14 mAh/day**, giving an estimated runtime of:
+
+> **2500 mAh ÷ 14 mAh/day ≈ 178 days (~6 months)**
+
+Real-world runtime depends on cell capacity, temperature, and how often a fresh OTAA join is needed after a reset. Measuring actual active-phase current with a shunt resistor or power analyser would sharpen the estimate further.
 
 ## LoRa payload format
 
