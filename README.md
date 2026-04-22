@@ -36,7 +36,7 @@ Out-of-the-box dev boards are not optimised for battery operation. Two physical 
 
 **Moisture sensor board:** the onboard power LED was desoldered. Note: this was not strictly necessary — the sensor is only powered when switched on via GPIO, so the LED would only be on during the brief measurement window. It was removed out of caution.
 
-Both LEDs were removed with a soldering iron. No other components were changed. The measured sleep current of 330 µA already reflects these modifications.
+Both LEDs were removed with a soldering iron. No other components were changed. The measured sleep floor is 220 µA, with periodic peaks to 330 µA from the DHT11's internal measurement cycle.
 
 ## Credentials
 
@@ -84,8 +84,8 @@ A typical LDO regulator draws 1–5 mA of quiescent current regardless of load. 
 The power budget has two distinct components: the sleep baseline and the transmit overhead.
 
 **Sleep baseline (measured):**
-330 µA × 24 h = **7.9 mAh/day**
-This is the dominant and measurable part. It breaks down roughly as: ESP32-C3 deep sleep ~5 µA + DHT11 standby ~100 µA + HT7333 quiescent ~55 µA + PCB leakage/pull-ups ~170 µA.
+220 µA × 24 h = **5.3 mAh/day**
+This is the steady-state sleep floor: ESP32-C3 deep sleep ~5 µA + DHT11 standby + PCB leakage. The DHT11 adds periodic spikes up to 330 µA (~110 µA extra) roughly every 2 seconds as it runs its internal measurement cycle; these are brief enough that average current stays close to the 220 µA floor.
 
 **Transmit overhead (estimated, 48 cycles/day):**
 
@@ -95,9 +95,9 @@ This is the dominant and measurable part. It breaks down roughly as: ESP32-C3 de
 | ESP32-C3 active (boot, DHT, RX windows) | ~8 s | ~25 mA | ~2.7 mAh |
 | **TX subtotal** | | | **~5.9 mAh** |
 
-**Total: ~14 mAh/day**, giving an estimated runtime of:
+**Total: ~11 mAh/day**, giving an estimated runtime of:
 
-> **2500 mAh ÷ 14 mAh/day ≈ 178 days (~6 months)**
+> **2500 mAh ÷ 11 mAh/day ≈ 227 days (~7.5 months)**
 
 Real-world runtime depends on cell capacity, temperature, and how often a fresh OTAA join is needed after a reset. Measuring actual active-phase current with a shunt resistor or power analyser would sharpen the estimate further.
 
