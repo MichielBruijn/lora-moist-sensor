@@ -32,7 +32,7 @@ DHT11 data pin: GPIO 1, powered from the 3.3 V rail.
 
 Out-of-the-box dev boards are not optimised for battery operation. Two physical modifications were made before deploying this device:
 
-**ESP32-C3 dev board (USB-C variant):** the onboard power LED was desoldered. A typical power LED with a 1 kΩ series resistor draws ~3 mA continuously — more than ten times the entire sleep budget of the circuit.
+**ESP32-C3 dev board :** the onboard power LED was desoldered. A typical power LED with a 1 kΩ series resistor draws ~3 mA continuously — more than ten times the entire sleep budget of the circuit.
 
 **Moisture sensor board:** the onboard power LED was desoldered. Note: this was not strictly necessary — the sensor is only powered when switched on via GPIO, so the LED would only be on during the brief measurement window. It was removed out of caution.
 
